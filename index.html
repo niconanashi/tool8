@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>ニコ生CMメーカー 制作ツール (game.json修正版)</title>
+	<title>ニコ生CMメーカー 制作ツール (正常動作版)</title>
 
 	<!-- セキュリティ規制回避 -->
 	<script>
@@ -54,7 +54,7 @@
 	</div>
 
 	<div class="audio-section">
-		<div id="audio-drop-zone">ここにBGM(音楽)をドロップ</div>
+		<div id="audio-drop-zone">ここにBGMをドロップ</div>
 		<input type="file" id="audio-input" style="display:none" accept="audio/*">
 		<div id="audio-status">音声未設定：既存のBGMを使用</div>
 	</div>
@@ -102,35 +102,6 @@
 		} catch (e) { status.innerText = "エラー: FFmpegのロード失敗"; }
 	})();
 
-	// --- 音声処理 ---
-	const audioDropZone = document.getElementById('audio-drop-zone');
-	audioDropZone.onclick = () => document.getElementById('audio-input').click();
-	document.getElementById('audio-input').onchange = (e) => { if(e.target.files[0]) processAudio(e.target.files[0]); };
-	audioDropZone.ondragover = (e) => { e.preventDefault(); };
-	audioDropZone.ondrop = async (e) => {
-		e.preventDefault();
-		if (e.dataTransfer.files[0]) processAudio(e.dataTransfer.files[0]);
-	};
-
-	async function processAudio(file) {
-		audioStatus.innerText = "変換中...";
-		try {
-			ffmpeg.FS('writeFile', 'src', await fetchFile(file));
-			await ffmpeg.run('-i', 'src', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'out.m4a');
-			convertedBgm.m4a = ffmpeg.FS('readFile', 'out.m4a');
-			await ffmpeg.run('-i', 'src', '-c:a', 'libvorbis', '-q:a', '4', 'out.ogg');
-			convertedBgm.ogg = ffmpeg.FS('readFile', 'out.ogg');
-
-			const audioTag = document.createElement('audio');
-			audioTag.src = URL.createObjectURL(file);
-			audioTag.onloadedmetadata = () => {
-				document.getElementById('totalDuration').value = Math.ceil(audioTag.duration);
-				audioStatus.innerText = `設定完了: ${file.name}`;
-			};
-		} catch (err) { audioStatus.innerText = "変換失敗"; }
-	}
-
-	// --- 画像管理 ---
 	function addImageToList(blob) {
 		const item = { id: Math.random(), blob: blob, url: URL.createObjectURL(blob) };
 		imageList.push(item);
@@ -179,7 +150,32 @@
 		Array.from(e.target.files).forEach(file => addImageToList(file));
 	};
 
-	// --- ZIP作成 (game.jsonの完全再現) ---
+	const audioDropZone = document.getElementById('audio-drop-zone');
+	audioDropZone.onclick = () => document.getElementById('audio-input').click();
+	document.getElementById('audio-input').onchange = (e) => { if(e.target.files[0]) processAudio(e.target.files[0]); };
+	audioDropZone.ondragover = (e) => { e.preventDefault(); };
+	audioDropZone.ondrop = async (e) => {
+		e.preventDefault();
+		if (e.dataTransfer.files[0]) processAudio(e.dataTransfer.files[0]);
+	};
+
+	async function processAudio(file) {
+		audioStatus.innerText = "変換中...";
+		try {
+			ffmpeg.FS('writeFile', 'src', await fetchFile(file));
+			await ffmpeg.run('-i', 'src', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'out.m4a');
+			convertedBgm.m4a = ffmpeg.FS('readFile', 'out.m4a');
+			await ffmpeg.run('-i', 'src', '-c:a', 'libvorbis', '-q:a', '4', 'out.ogg');
+			convertedBgm.ogg = ffmpeg.FS('readFile', 'out.ogg');
+			const audioTag = document.createElement('audio');
+			audioTag.src = URL.createObjectURL(file);
+			audioTag.onloadedmetadata = () => {
+				document.getElementById('totalDuration').value = Math.ceil(audioTag.duration);
+				audioStatus.innerText = `設定完了: ${file.name}`;
+			};
+		} catch (err) { audioStatus.innerText = "変換失敗"; }
+	}
+
 	downloadBtn.onclick = async () => {
 		if (imageList.length === 0) return;
 		status.innerText = "作成中...";
@@ -187,7 +183,7 @@
 		const durationMs = parseInt(document.getElementById('totalDuration').value) * 1000;
 		const imageIds = imageList.map((_, i) => String.fromCharCode(97 + i));
 
-		// 1. game.json 作成 (ご提示の正常版を完全再現)
+		// --- 1. game.json 作成 (完全再現版) ---
 		const gameJson = {
 			"width": 1280,
 			"height": 720,
@@ -195,104 +191,125 @@
 			"main": "./script/main.js",
 			"assets": {
 				"bgm": {
-					"type": "audio",
-					"path": "files/bgm",
-					"systemId": "sound",
-					"duration": durationMs,
-					"hint": {
-						"extensions": [".m4a", ".ogg"]
-					},
+					"type": "audio", "path": "files/bgm", "systemId": "sound", "duration": durationMs,
+					"hint": { "extensions": [ ".m4a", ".ogg" ] },
 					"virtualPath": "audio/bgm"
 				}
-				// 画像とbundleは下で追加
 			},
 			"defaultSkippingScene": "indicator",
 			"defaultLoadingScene": "none",
 			"environment": {
 				"sandbox-runtime": "3",
 				"nicolive": {
-					"supportedModes": ["ranking"],
-					"preferredSessionParameters": {
-						"totalTimeLimit": 200
-					}
+					"supportedModes": [ "ranking" ],
+					"preferredSessionParameters": { "totalTimeLimit": 200 }
 				},
-				"external": {
-					"send": "0"
-				},
-				"akashic-runtime": {
-					"version": "~3.12.6-1",
-					"flavor": "-canvas"
-				}
+				"external": { "send": "0" },
+				"akashic-runtime": { "version": "~3.12.6-1", "flavor": "-canvas" }
 			},
 			"globalScripts": [],
 			"moduleMainScripts": {},
 			"exportZipInfo": {
 				"version": "2.0.6",
-				"option": {
-					"strip": true,
-					"babel": true,
-					"hashFilename": true,
-					"targetService": "nicolive",
-					"nicolive": true
-				}
+				"option": { "strip": true, "babel": true, "hashFilename": true, "targetService": "nicolive", "nicolive": true }
 			},
 			"assetBundle": "./script/aez_asset_bundle.js"
 		};
 
-		// 画像アセットを追加
 		imageIds.forEach(id => {
 			gameJson.assets[id] = {
-				"type": "image",
-				"path": `files/${id}.png`,
-				"width": 1280,
-				"height": 720,
-				"hint": { "untainted": true },
-				"virtualPath": `image/${id}.png`
+				"type": "image", "path": `files/${id}.png`, "width": 1280, "height": 720,
+				"hint": { "untainted": true }, "virtualPath": `image/${id}.png`
 			};
 		});
 
-		// bundleを追加 (hintなし)
 		gameJson.assets["aez_asset_bundle"] = {
-			"type": "script",
-			"global": true,
-			"path": "files/main.js",
-			"virtualPath": "script/aez_asset_bundle.js"
+			"type": "script", "global": true, "path": "files/main.js", "virtualPath": "script/aez_asset_bundle.js"
 		};
 
 		zip.file("game.json", JSON.stringify(gameJson, null, "\t"));
 
-		// 2. main.js 内容生成
+		// --- 2. main.js 生成 (元のコードを完全復元) ---
+		const endTextVal = document.getElementById('endText').value.replace(/"/g, '\\"');
+		const textColorVal = document.getElementById('textColor').value;
+		const fadeSpeed = document.getElementById('fadeIn').value;
+
 		const mainJsContent = `module.exports={assets:{"main": {type:"script",path:"script/main.js",global:true,execute: rv => {
 'use strict';
+const module = rv.module;const exports = module.exports;const require = module.require;const __dirname = rv.dirname;const __filename = rv.filename;
 function main(param) {
-  var TOTAL_DURATION = ${durationMs};
+  var TOTAL_MUSIC_DURATION = ${durationMs};
+  var MAX_IMAGES = ${imageList.length};
+  var FADE_SPEED = ${fadeSpeed};
+  var FADE_SPEED2 = 0.1;
   var IMAGE_IDS = ${JSON.stringify(imageIds)};
-  var FADE = ${document.getElementById('fadeIn').value};
+
+  var timePerImage = TOTAL_MUSIC_DURATION / MAX_IMAGES;
+  var fps = 30;
+  var fadeTimeMs = 1 / FADE_SPEED * (1000 / fps);
+  var calculatedDuration = timePerImage - fadeTimeMs;
+  if (calculatedDuration < 0) calculatedDuration = 0;
+  g.game.audio.music.volume = 0.9;
+
   var scene = new g.Scene({ game: g.game, assetPaths: ["/**/*"] });
+  var font = new g.DynamicFont({
+    game: g.game, fontFamily: "sans-serif", fontColor: "${textColorVal}",
+    strokeColor: "black", strokeWidth: 5, size: 60
+  });
+
   scene.onLoad.add(function () {
     if (scene.asset.getAudioById("bgm")) scene.asset.getAudioById("bgm").play();
-    var idx = 0; var cur = null;
-    function next() {
-      if (idx >= ${imageList.length}) {
-        var f = new g.DynamicFont({ game: g.game, fontFamily: "sans-serif", size: 60 });
-        new g.Label({ scene: scene, font: f, text: "${document.getElementById('endText').value.replace(/"/g, '\\"')}", x: 640, y: 360, anchorX: 0.5, anchorY: 0.5, textColor: "${document.getElementById('textColor').value}", parent: scene });
+    var currentIndex = 0; var currentSprite = null;
+
+    function showNextSlide() {
+      if (currentIndex >= MAX_IMAGES || currentIndex >= IMAGE_IDS.length) {
+        new g.Label({
+          scene: scene, font: font, text: "${endTextVal}",
+          x: g.game.width / 2, y: g.game.height / 2,
+          anchorX: 0.5, anchorY: 0.5, fontSize: 60, parent: scene
+        });
         return;
       }
-      var s = new g.Sprite({ scene: scene, src: scene.asset.getImageById(IMAGE_IDS[idx]), opacity: idx === 0 ? 1 : 0, parent: scene });
-      if (idx === 0) { cur = s; } else {
-        var p = cur;
-        s.onUpdate.add(function() { if(s.opacity < 1){ s.opacity += FADE; s.modified(); } else { s.onUpdate.removeAll(); p.destroy(); cur = s; } });
+      var nextSprite = new g.Sprite({
+        scene: scene, src: scene.asset.getImageById(IMAGE_IDS[currentIndex]),
+        opacity: currentIndex === 0 ? 1 : 0, parent: scene
+      });
+      if (currentIndex === 0) {
+        currentSprite = nextSprite;
+        startTimer(timePerImage);
+      } else {
+        var prevSprite = currentSprite;
+        nextSprite.onUpdate.add(function () {
+          if (nextSprite.opacity < 1) {
+            nextSprite.opacity += FADE_SPEED;
+            if (nextSprite.opacity > 1) nextSprite.opacity = 1;
+            nextSprite.modified();
+          } else {
+            nextSprite.onUpdate.removeAll();
+            prevSprite.onUpdate.add(function () {
+              prevSprite.opacity -= FADE_SPEED2;
+              if (prevSprite.opacity <= 0) prevSprite.destroy(); else prevSprite.modified();
+            });
+            currentSprite = nextSprite;
+            startTimer(calculatedDuration);
+          }
+        });
       }
-      scene.setTimeout(function(){ idx++; next(); }, TOTAL_DURATION / ${imageList.length});
     }
-    next();
+    function startTimer(duration) {
+      scene.setTimeout(function () { currentIndex++; showNextSlide(); }, duration);
+    }
+    showNextSlide();
   });
   g.game.pushScene(scene);
-}},},"data": {type:"text",path:"text/data.json",data: \`{}\`,},}}`;
+}
+module.exports = main;
+return module.exports;
+},},"data": {type:"text",path:"text/data.json",data: \`{}\`,},}}`;
 
 		zip.file("files/main.js", mainJsContent);
 
-		// 3. 音声ファイル追加
+		// --- 3. 音声ファイル追加 ---
 		if (convertedBgm.m4a) {
 			zip.file("files/bgm.m4a", convertedBgm.m4a);
 			zip.file("files/bgm.ogg", convertedBgm.ogg);
@@ -303,11 +320,11 @@ function main(param) {
 			} catch(e){}
 		}
 
-		// 4. 画像ファイル追加
+		// --- 4. 画像ファイル追加 ---
 		imageList.forEach((img, i) => zip.file(`files/${imageIds[i]}.png`, img.blob));
 
 		saveAs(await zip.generateAsync({ type: "blob" }), "game.zip");
-		status.innerText = "完了！";
+		status.innerText = "作成完了！";
 	};
 </script>
 </body>
