@@ -3,7 +3,7 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>ニコ生CMメーカー 制作ツール (a1形式版)</title>
+	<title>ニコ生CMメーカー 制作ツール (a1形式統一版)</title>
 
 	<!-- セキュリティ規制回避 -->
 	<script>
@@ -90,13 +90,18 @@
 	(async () => {
 		try {
 			await ffmpeg.load();
-			// 初期画像読み込み (a～tを読み込むが、内部管理は数値IDに変換)
-			const letters = "abcdefghijklmnopqrst".split("");
-			for (const char of letters) {
+			// 【修正】初期画像読み込み (a1.png, a2.png ... 形式に対応)
+			status.innerText = "初期画像を読み込んでいます...";
+			for (let i = 1; i <= 100; i++) {
 				try {
-					const res = await fetch(`./game/files/${char}.png`);
-					if (res.ok) addImageToList(await res.blob());
-				} catch (e) {}
+					const res = await fetch(`./game/files/a${i}.png`);
+					if (res.ok) {
+						addImageToList(await res.blob());
+					} else {
+						// ファイルが見つからなくなったら終了
+						break;
+					}
+				} catch (e) { break; }
 			}
 			status.innerText = "準備完了";
 		} catch (e) { status.innerText = "エラー: 起動失敗"; }
@@ -182,10 +187,10 @@
 		const zip = new JSZip();
 		const durationMs = parseInt(document.getElementById('totalDuration').value) * 1000;
 		
-		// 画像名を a1, a2, a3... に変更
+		// IDを a1, a2, a3... に統一
 		const imageIds = imageList.map((_, i) => `a${i + 1}`);
 
-		// --- 1. game.json 作成 (正常版完全準拠) ---
+		// --- 1. game.json 作成 (正常版に完全準拠) ---
 		const gameJson = {
 			"width": 1280,
 			"height": 720,
@@ -204,7 +209,7 @@
 				"sandbox-runtime": "3",
 				"nicolive": {
 					"supportedModes": [ "ranking" ],
-					"preferredSessionParameters": { "totalTimeLimit": Math.ceil(durationMs/1000) + 10 }
+					"preferredSessionParameters": { "totalTimeLimit": 200 }
 				},
 				"external": { "send": "0" },
 				"akashic-runtime": { "version": "~3.12.6-1", "flavor": "-canvas" }
@@ -231,7 +236,7 @@
 
 		zip.file("game.json", JSON.stringify(gameJson, null, "\t"));
 
-		// --- 2. main.js 生成 (a1形式に対応) ---
+		// --- 2. main.js 生成 (a1形式・ボイラープレート維持) ---
 		const endTextVal = document.getElementById('endText').value.replace(/"/g, '\\"');
 		const textColorVal = document.getElementById('textColor').value;
 		const fadeSpeed = document.getElementById('fadeIn').value;
@@ -262,9 +267,8 @@ function main(param) {
   scene.onLoad.add(function () {
     if (scene.asset.getAudioById("bgm")) scene.asset.getAudioById("bgm").play();
     var currentIndex = 0; var currentSprite = null;
-
     function showNextSlide() {
-      if (currentIndex >= MAX_IMAGES) {
+      if (currentIndex >= MAX_IMAGES || currentIndex >= IMAGE_IDS.length) {
         new g.Label({
           scene: scene, font: font, text: "${endTextVal}",
           x: g.game.width / 2, y: g.game.height / 2,
@@ -311,7 +315,7 @@ return module.exports;
 
 		zip.file("files/main.js", mainJsContent);
 
-		// --- 3. 音声・画像ファイル追加 ---
+		// --- 3. 音声ファイル追加 ---
 		if (convertedBgm.m4a) {
 			zip.file("files/bgm.m4a", convertedBgm.m4a);
 			zip.file("files/bgm.ogg", convertedBgm.ogg);
@@ -321,6 +325,8 @@ return module.exports;
 				zip.file("files/bgm.m4a", bA); zip.file("files/bgm.ogg", bO);
 			} catch(e){}
 		}
+
+		// --- 4. 画像ファイル追加 (a1.png, a2.png...として保存) ---
 		imageList.forEach((img, i) => zip.file(`files/${imageIds[i]}.png`, img.blob));
 
 		saveAs(await zip.generateAsync({ type: "blob" }), "game.zip");
