@@ -1,269 +1,277 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ニコ生CMメーカー 制作ツール (Stable v2)</title>
-    <!-- 成功しているコードと同じライブラリURL -->
-    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-
-    <style>
-        body { font-family: sans-serif; background-color: #f4f7f9; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .card { background: white; padding: 2rem; border-radius: 1.5rem; box-shadow: 0 10px 25px rgba(0,0,0,0.05); width: 95%; max-width: 800px; }
-        h1 { margin-top: 0; font-size: 1.5rem; color: #2d3748; text-align: center; }
-        
-        .config-row { display: flex; gap: 15px; margin-bottom: 1.5rem; padding: 1rem; background: #f8fafc; border-radius: 1rem; flex-wrap: wrap; }
-        .input-group { display: flex; flex-direction: column; font-size: 0.8rem; gap: 5px; }
-        input[type="number"] { width: 60px; padding: 5px; border: 1px solid #e2e8f0; }
-
-        .image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin: 1.5rem 0; }
-        .image-item { position: relative; background: #fff; padding: 5px; border-radius: 10px; border: 2px solid #e2e8f0; cursor: grab; text-align: center; }
-        .image-item img { width: 100%; height: 80px; object-fit: contain; background: #333; border-radius: 5px; }
-        .image-label { font-size: 11px; margin-top: 5px; font-weight: bold; }
-        
-        .btn-del { position: absolute; top: -5px; right: -5px; background: #e53e3e; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 12px; }
-        .btn-add { background: #3182ce; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin-bottom: 1rem; }
-        
-        #status { margin-top: 1rem; font-size: 0.9rem; font-weight: bold; min-height: 2rem; text-align: center; color: #2b6cb0; line-height: 1.4; }
-        #download-btn { margin-top: 1rem; padding: 1rem; font-size: 1.1rem; cursor: pointer; display: none; background: #48bb78; color: white; border: none; border-radius: 0.8rem; width: 100%; font-weight: bold; }
-    </style>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>ニコ生CMメーカー 制作ツール</title>
+	<!-- ライブラリ読み込み -->
+	<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+	<style>
+		body { font-family: sans-serif; background-color: #e0e6ed; color: #333; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+		.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 95%; max-width: 900px; }
+		h1 { font-size: 20px; color: #2d3748; text-align: center; margin-top: 0; }
+		.config-row { display: flex; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 10px; margin-bottom: 20px; flex-wrap: wrap; border: 1px solid #cbd5e0; }
+		.input-group { display: flex; flex-direction: column; font-size: 13px; }
+		input[type="number"] { width: 60px; padding: 5px; }
+		.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; margin-top: 10px; min-height: 100px; }
+		.image-item { position: relative; background: #fff; border: 2px solid #cbd5e0; border-radius: 8px; padding: 5px; cursor: grab; text-align: center; }
+		.image-item img { width: 100%; height: 80px; object-fit: contain; background: #000; border-radius: 4px; }
+		.image-label { font-size: 11px; margin-top: 5px; font-weight: bold; }
+		.btn-del { position: absolute; top: -8px; right: -8px; background: #e53e3e; color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-weight: bold; }
+		.btn-add { background: #3182ce; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 10px 0; }
+		#status { margin: 15px 0; padding: 10px; border-radius: 8px; background: #ebf8ff; color: #2b6cb0; font-weight: bold; text-align: center; font-size: 14px; }
+		#downloadZip { background: #48bb78; color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; display: none; }
+	</style>
 </head>
 <body>
 
 <div class="card">
-    <h1>ニコ生CMメーカー 制作ツール</h1>
+	<h1>ニコ生CMメーカー 制作ツール</h1>
+	
+	<div class="config-row">
+		<div class="input-group">
+			<label>フェードイン</label>
+			<input type="number" id="fadeIn" value="0.02" step="0.01">
+		</div>
+		<div class="input-group">
+			<label>フェードアウト</label>
+			<input type="number" id="fadeOut" value="0.1" step="0.01">
+		</div>
+		<div class="input-group" style="flex-grow: 1;">
+			<label>BGM変更 (自動で bgm にリネームされます)</label>
+			<input type="file" id="audio-input" accept="audio/*">
+		</div>
+	</div>
 
-    <div class="config-row">
-        <div class="input-group">
-            <label>フェードイン</label>
-            <input type="number" id="fade-in" value="0.02" step="0.01">
-        </div>
-        <div class="input-group">
-            <label>フェードアウト</label>
-            <input type="number" id="fade-out" value="0.1" step="0.01">
-        </div>
-        <div class="input-group" style="flex-grow: 1;">
-            <label>BGM変更 (mp3, wav等)</label>
-            <input type="file" id="audio-input" accept="audio/*">
-        </div>
-    </div>
+	<div style="text-align: center;">
+		<button class="btn-add" onclick="document.getElementById('bulk-input').click()">画像を一括追加 (1280x720)</button>
+		<input type="file" id="bulk-input" style="display:none" multiple accept="image/*">
+	</div>
 
-    <div style="text-align: center;">
-        <button class="btn-add" onclick="document.getElementById('image-bulk-input').click()">画像を一括追加 (1280x720)</button>
-        <input type="file" id="image-bulk-input" style="display:none" multiple accept="image/*">
-        <p style="font-size: 12px; color: #718096;">ドラッグで並び替え / 画像クリックで差し替え</p>
-    </div>
-
-    <div id="image-grid" class="image-grid"></div>
-
-    <div id="status">FFmpegを準備中...</div>
-    
-    <button id="download-btn">game.zip を作成して保存</button>
+	<div id="image-grid" class="image-grid"></div>
+	<div id="status">システム起動中...</div>
+	<button id="downloadZip">game.zip をダウンロード</button>
 </div>
 
 <input type="file" id="replace-input" style="display:none" accept="image/*">
 
 <script>
-    const { createFFmpeg, fetchFile } = FFmpeg;
-    const status = document.getElementById('status');
-    const gridEl = document.getElementById('image-grid');
-    const downloadBtn = document.getElementById('download-btn');
-    const replaceInput = document.getElementById('replace-input');
+	// ★最重要: GitHub Pagesでの SharedArrayBuffer エラーを回避する Polyfill
+	if (!window.SharedArrayBuffer) {
+		window.SharedArrayBuffer = class {};
+	}
 
-    // ★成功コードと完全に同じ設定★
-    const ffmpeg = createFFmpeg({
-        log: true,
-        corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
-    });
+	const { createFFmpeg, fetchFile } = FFmpeg;
+	const gridEl = document.getElementById('image-grid');
+	const status = document.getElementById('status');
+	const downloadBtn = document.getElementById('downloadZip');
+	const replaceInput = document.getElementById('replace-input');
 
-    let bgmData = { m4a: null, ogg: null, duration: 0 };
-    let imageList = []; 
-    let currentReplaceId = null;
+	const ffmpeg = createFFmpeg({
+		log: true,
+		corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
+	});
 
-    // --- 初期ロード ---
-    (async () => {
-        try {
-            await ffmpeg.load();
-            status.innerText = "初期データを読み込んでいます...";
-            await Promise.all([loadDefaultImages(), loadDefaultBGM()]);
-            status.innerText = "準備完了！このまま保存も可能です。";
-            downloadBtn.style.display = 'block';
-        } catch (e) {
-            status.innerHTML = "<span style='color:red'>FFmpegの読み込みに失敗しました。再読み込みしてください。</span>";
-            console.error(e);
-        }
-    })();
+	let bgmData = { m4a: null, ogg: null, duration: 0 };
+	let imageList = []; 
+	let replaceTargetId = null;
 
-    // 1枚ずつ初期画像を fetch
-    async function loadDefaultImages() {
-        const letters = "abcdefghijklmnopqrst".split("");
-        for (let l of letters) {
-            try {
-                const res = await fetch(`game/files/${l}.png`, {cache: "no-cache"});
-                if (res.ok) {
-                    const blob = await res.blob();
-                    const item = { id: Math.random(), blob: blob, url: URL.createObjectURL(blob) };
-                    imageList.push(item);
-                    renderItem(item);
-                }
-            } catch (e) { console.warn(l + ".png not found"); }
-        }
-    }
+	// --- 1. 初期化 ---
+	(async () => {
+		try {
+			status.innerText = "FFmpegを読み込み中...";
+			await ffmpeg.load();
+			
+			status.innerText = "画像を読み込んでいます...";
+			await loadInitialImages();
+			
+			status.innerText = "BGMを読み込んでいます...";
+			await loadDefaultBGM();
+			
+			status.innerText = "準備完了！";
+			downloadBtn.style.display = 'block';
+		} catch (e) {
+			status.innerHTML = "<span style='color:red'>起動エラー: ブラウザをリロードしてください。</span>";
+			console.error(e);
+		}
+	})();
 
-    // デフォルトBGMを fetch
-    async function loadDefaultBGM() {
-        try {
-            const [resM, resO] = await Promise.all([
-                fetch('game/files/bgm.m4a'),
-                fetch('game/files/bgm.ogg')
-            ]);
-            bgmData.m4a = new Uint8Array(await resM.arrayBuffer());
-            bgmData.ogg = new Uint8Array(await resO.arrayBuffer());
-            
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const decoded = await audioCtx.decodeAudioData(bgmData.m4a.buffer.slice(0));
-            bgmData.duration = Math.floor(decoded.duration * 1000);
-        } catch (e) { console.warn("Default BGM not found"); }
-    }
+	// 画像 a.png ～ t.png を読み込む
+	async function loadInitialImages() {
+		const alphabet = "abcdefghijklmnopqrst".split("");
+		for (const char of alphabet) {
+			try {
+				const path = `./game/files/${char}.png`;
+				const res = await fetch(path);
+				if (!res.ok) throw new Error("Not found");
+				const blob = await res.blob();
+				const item = { id: Math.random(), blob: blob, url: URL.createObjectURL(blob) };
+				imageList.push(item);
+				renderItem(item);
+			} catch (e) {
+				console.warn(`Skip initial image: ${char}.png`);
+			}
+		}
+		updateLabels();
+	}
 
-    function renderItem(item) {
-        const div = document.createElement('div');
-        div.className = 'image-item';
-        div.dataset.id = item.id;
-        div.innerHTML = `
-            <button class="btn-del" onclick="deleteImage(${item.id})">×</button>
-            <img src="${item.url}" onclick="triggerReplace(${item.id})">
-            <div class="image-label"></div>
-        `;
-        gridEl.appendChild(div);
-        updateOrder();
-    }
+	// デフォルトBGMを読み込む
+	async function loadDefaultBGM() {
+		try {
+			const [resM, resO] = await Promise.all([
+				fetch('./game/files/bgm.m4a'),
+				fetch('./game/files/bgm.ogg')
+			]);
+			bgmData.m4a = new Uint8Array(await resM.arrayBuffer());
+			bgmData.ogg = new Uint8Array(await resO.arrayBuffer());
+			
+			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+			const decoded = await audioCtx.decodeAudioData(bgmData.m4a.buffer.slice(0));
+			bgmData.duration = Math.floor(decoded.duration * 1000);
+		} catch (e) {
+			console.warn("Default BGM not found. Please upload one.");
+		}
+	}
 
-    function updateOrder() {
-        const labels = gridEl.querySelectorAll('.image-label');
-        labels.forEach((el, i) => el.innerText = `${i + 1}枚目`);
-    }
+	function renderItem(item) {
+		const div = document.createElement('div');
+		div.className = 'image-item';
+		div.dataset.id = item.id;
+		div.innerHTML = `
+			<button class="btn-del" onclick="deleteImage(${item.id})">×</button>
+			<img src="${item.url}" onclick="triggerReplace(${item.id})">
+			<div class="image-label"></div>
+		`;
+		gridEl.appendChild(div);
+	}
 
-    // 並び替え (SortableJS)
-    new Sortable(gridEl, {
-        animation: 150,
-        onEnd: () => {
-            const newOrder = [];
-            gridEl.querySelectorAll('.image-item').forEach(el => {
-                const id = parseFloat(el.dataset.id);
-                newOrder.push(imageList.find(img => img.id === id));
-            });
-            imageList = newOrder;
-            updateOrder();
-        }
-    });
+	function updateLabels() {
+		const labels = gridEl.querySelectorAll('.image-label');
+		labels.forEach((el, i) => el.innerText = `${i + 1}枚目`);
+	}
 
-    // --- 操作系 ---
-    function deleteImage(id) {
-        imageList = imageList.filter(img => img.id !== id);
-        gridEl.querySelector(`[data-id="${id}"]`).remove();
-        updateOrder();
-    }
+	// 並び替え機能
+	Sortable.create(gridEl, {
+		animation: 150,
+		onEnd: () => {
+			const newOrder = [];
+			gridEl.querySelectorAll('.image-item').forEach(el => {
+				const id = parseFloat(el.dataset.id);
+				newOrder.push(imageList.find(img => img.id === id));
+			});
+			imageList = newOrder;
+			updateLabels();
+		}
+	});
 
-    function triggerReplace(id) {
-        currentReplaceId = id;
-        replaceInput.click();
-    }
+	// --- 2. 操作ロジック ---
+	function deleteImage(id) {
+		imageList = imageList.filter(img => img.id !== id);
+		gridEl.querySelector(`[data-id="${id}"]`).remove();
+		updateLabels();
+	}
 
-    replaceInput.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const img = new Image();
-        img.onload = () => {
-            if (img.width === 1280 && img.height === 720) {
-                const idx = imageList.findIndex(img => img.id === currentReplaceId);
-                imageList[idx] = { id: currentReplaceId, blob: file, url: URL.createObjectURL(file) };
-                gridEl.querySelector(`[data-id="${currentReplaceId}"] img`).src = imageList[idx].url;
-            } else { alert("1280x720サイズのみ許可されています。"); }
-        };
-        img.src = URL.createObjectURL(file);
-    };
+	function triggerReplace(id) {
+		replaceTargetId = id;
+		replaceInput.click();
+	}
 
-    document.getElementById('image-bulk-input').onchange = (e) => {
-        Array.from(e.target.files).forEach(file => {
-            const img = new Image();
-            img.onload = () => {
-                if (img.width === 1280 && img.height === 720) {
-                    const item = { id: Math.random(), blob: file, url: URL.createObjectURL(file) };
-                    imageList.push(item);
-                    renderItem(item);
-                }
-            };
-            img.src = URL.createObjectURL(file);
-        });
-    };
+	replaceInput.onchange = (e) => {
+		const file = e.target.files[0];
+		if (!file) return;
+		const img = new Image();
+		img.onload = () => {
+			if (img.width === 1280 && img.height === 720) {
+				const idx = imageList.findIndex(img => img.id === replaceTargetId);
+				imageList[idx].blob = file;
+				imageList[idx].url = URL.createObjectURL(file);
+				gridEl.querySelector(`[data-id="${replaceTargetId}"] img`).src = imageList[idx].url;
+			} else { alert("1280x720サイズのみです"); }
+		};
+		img.src = URL.createObjectURL(file);
+	};
 
-    // --- 音声変換 (成功コードのロジックそのまま) ---
-    document.getElementById('audio-input').onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file || !ffmpeg.isLoaded()) return;
+	document.getElementById('bulk-input').onchange = (e) => {
+		Array.from(e.target.files).forEach(file => {
+			const img = new Image();
+			img.onload = () => {
+				if (img.width === 1280 && img.height === 720) {
+					const item = { id: Math.random(), blob: file, url: URL.createObjectURL(file) };
+					imageList.push(item);
+					renderItem(item);
+					updateLabels();
+				}
+			};
+			img.src = URL.createObjectURL(file);
+		});
+	};
 
-        downloadBtn.style.display = 'none';
-        status.innerText = "音声ファイルを変換中...";
+	// --- 3. 音声変換 ---
+	document.getElementById('audio-input').onchange = async (e) => {
+		const file = e.target.files[0];
+		if (!file || !ffmpeg.isLoaded()) return;
 
-        try {
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const arrayBuffer = await file.arrayBuffer();
-            const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-            bgmData.duration = Math.floor(decoded.duration * 1000);
+		status.innerText = "音声変換中...（しばらくお待ちください）";
+		downloadBtn.style.display = 'none';
 
-            ffmpeg.FS('writeFile', 'in_tmp', await fetchFile(file));
+		try {
+			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+			const buffer = await file.arrayBuffer();
+			const decoded = await audioCtx.decodeAudioData(buffer);
+			bgmData.duration = Math.floor(decoded.duration * 1000);
 
-            status.innerHTML = "AAC (M4A) に変換中...";
-            await ffmpeg.run('-i', 'in_tmp', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'out.m4a');
-            bgmData.m4a = ffmpeg.FS('readFile', 'out.m4a');
+			ffmpeg.FS('writeFile', 'input_src', await fetchFile(file));
+			
+			status.innerText = "M4Aへ変換中...";
+			await ffmpeg.run('-i', 'input_src', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'out.m4a');
+			bgmData.m4a = ffmpeg.FS('readFile', 'out.m4a');
 
-            status.innerHTML = "OGGに変換中...";
-            await ffmpeg.run('-i', 'in_tmp', '-c:a', 'libvorbis', '-q:a', '4', 'out.ogg');
-            bgmData.ogg = ffmpeg.FS('readFile', 'out.ogg');
+			status.innerText = "OGGへ変換中...";
+			await ffmpeg.run('-i', 'input_src', '-c:a', 'libvorbis', '-q:a', '4', 'out.ogg');
+			bgmData.ogg = ffmpeg.FS('readFile', 'out.ogg');
 
-            status.innerText = "音声変換完了！";
-            downloadBtn.style.display = 'block';
-        } catch (err) {
-            status.innerHTML = "<span style='color:red'>音声の変換に失敗しました。</span>";
-        }
-    };
+			status.innerText = `音声完了: ${(bgmData.duration/1000).toFixed(1)}秒`;
+			downloadBtn.style.display = 'block';
+		} catch (err) {
+			status.innerHTML = "<span style='color:red'>変換失敗</span>";
+		}
+	};
 
-    // --- ZIP作成 ---
-    downloadBtn.onclick = async () => {
-        status.innerText = "ZIPアーカイブを作成中...";
-        const zip = new JSZip();
-        const imageIds = imageList.map((_, i) => String.fromCharCode(97 + i));
+	// --- 4. ZIP作成 ---
+	downloadBtn.onclick = async () => {
+		status.innerText = "ZIP作成中...";
+		const zip = new JSZip();
+		const imageIds = imageList.map((_, i) => String.fromCharCode(97 + i));
 
-        const gameJson = {
-            width: 1280, height: 720, fps: 30,
-            main: "./script/main.js",
-            assets: {
-                bgm: { type: "audio", path: "files/bgm", systemId: "sound", duration: bgmData.duration, hint: { extensions: [".m4a", ".ogg"] } },
-                aez_asset_bundle: { type: "script", global: true, path: "files/main.js", virtualPath: "script/aez_asset_bundle.js" }
-            },
-            environment: { "sandbox-runtime": "3", nicolive: { supportedModes: ["ranking"], preferredSessionParameters: { totalTimeLimit: Math.ceil(bgmData.duration/1000)+10 } } },
-            assetBundle: "./script/aez_asset_bundle.js"
-        };
-        imageIds.forEach(id => {
-            gameJson.assets[id] = { type: "image", path: `files/${id}.png`, width: 1280, height: 720 };
-        });
-        zip.file("game.json", JSON.stringify(gameJson, null, 2));
+		// game.json
+		const gameJson = {
+			width: 1280, height: 720, fps: 30, main: "./script/main.js",
+			assets: {
+				bgm: { type: "audio", path: "files/bgm", systemId: "sound", duration: bgmData.duration, hint: { extensions: [".m4a", ".ogg"] } },
+				aez_asset_bundle: { type: "script", global: true, path: "files/main.js", virtualPath: "script/aez_asset_bundle.js" }
+			},
+			environment: { "sandbox-runtime": "3", nicolive: { supportedModes: ["ranking"], preferredSessionParameters: { totalTimeLimit: Math.ceil(bgmData.duration/1000)+10 } } },
+			assetBundle: "./script/aez_asset_bundle.js"
+		};
+		imageIds.forEach(id => { gameJson.assets[id] = { type: "image", path: `files/${id}.png`, width: 1280, height: 720 }; });
+		zip.file("game.json", JSON.stringify(gameJson, null, 2));
 
-        const mainJs = `
+		// main.js (注入)
+		const mainJs = `
 module.exports={assets:{"main": {type:"script",path:"script/main.js",global:true,execute: rv => {
 'use strict';
 function main(param) {
   var TOTAL_MUSIC_DURATION = ${bgmData.duration};
   var MAX_IMAGES = ${imageList.length};
-  var FADE_SPEED = ${document.getElementById('fade-in').value};
-  var FADE_SPEED2 = ${document.getElementById('fade-out').value};
+  var FADE_SPEED = ${document.getElementById('fadeIn').value};
+  var FADE_SPEED2 = ${document.getElementById('fadeOut').value};
   var IMAGE_IDS = ${JSON.stringify(imageIds)};
   var timePerImage = TOTAL_MUSIC_DURATION / MAX_IMAGES;
-  var calculatedDuration = timePerImage - (1/FADE_SPEED * (1000/30));
+  var fadeTimeMs = 1 / FADE_SPEED * (1000 / 30);
+  var calculatedDuration = timePerImage - fadeTimeMs;
   if (calculatedDuration < 0) calculatedDuration = 0;
   var scene = new g.Scene({ game: g.game, assetPaths: ["/**/*"] });
   scene.onLoad.add(function () {
@@ -305,16 +313,15 @@ module.exports = main;
 return module.exports;
 },},"data": {type:"text",path:"text/data.json",data: \`{}\`,},}}`;
 
-        zip.file("files/main.js", mainJs);
-        zip.file("files/bgm.m4a", bgmData.m4a);
-        zip.file("files/bgm.ogg", bgmData.ogg);
-        imageList.forEach((img, i) => { zip.file(`files/${imageIds[i]}.png`, img.blob); });
+		zip.file("files/main.js", mainJs);
+		zip.file("files/bgm.m4a", bgmData.m4a);
+		zip.file("files/bgm.ogg", bgmData.ogg);
+		imageList.forEach((img, i) => { zip.file(`files/${imageIds[i]}.png`, img.blob); });
 
-        const content = await zip.generateAsync({ type: "blob" });
-        saveAs(content, "cm_maker.zip");
-        status.innerText = "作成完了！保存しました。";
-    };
+		const content = await zip.generateAsync({ type: "blob" });
+		saveAs(content, "game.zip");
+		status.innerText = "作成完了！";
+	};
 </script>
-
 </body>
 </html>
