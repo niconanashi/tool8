@@ -9,13 +9,14 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 	<style>
-		body { font-family: sans-serif; background-color: #f0f4f8; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+		body { font-family: sans-serif; background-color: #f0f4f8; padding: 20px; display: flex; flex-direction: column; align-items: center; }
 		.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 900px; }
-		h1 { font-size: 20px; color: #2d3748; text-align: center; }
+		h1 { font-size: 20px; color: #2d3748; text-align: center; margin-top: 0; }
 		
-		.controls { display: flex; gap: 15px; background: #edf2f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+		.controls { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; background: #edf2f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
 		.input-group { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
-		input { padding: 5px; border: 1px solid #cbd5e0; border-radius: 4px; }
+		input { padding: 6px; border: 1px solid #cbd5e0; border-radius: 4px; }
+		input[type="color"] { height: 35px; cursor: pointer; padding: 2px; }
 		
 		.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; border: 1px solid #eee; padding: 10px; }
 		.image-item { position: relative; background: #fff; border: 2px solid #cbd5e0; border-radius: 8px; padding: 5px; cursor: grab; text-align: center; }
@@ -40,12 +41,16 @@
 			<input type="number" id="totalDuration" value="60">
 		</div>
 		<div class="input-group">
-			<label>フェードイン速度</label>
+			<label>フェードイン速度 (0.01〜0.1)</label>
 			<input type="number" id="fadeIn" value="0.02" step="0.01">
 		</div>
 		<div class="input-group">
-			<label>フェードアウト速度</label>
-			<input type="number" id="fadeOut" value="0.1" step="0.01">
+			<label>終了メッセージ内容</label>
+			<input type="text" id="endText" value="ご視聴ありがとうございました">
+		</div>
+		<div class="input-group">
+			<label>メッセージの色</label>
+			<input type="color" id="textColor" value="#ffffff">
 		</div>
 	</div>
 
@@ -60,7 +65,6 @@
 	<button id="downloadZip">game.zip を作成・ダウンロード</button>
 </div>
 
-<!-- 差し替え用隠しinput -->
 <input type="file" id="replace-input" style="display:none" accept="image/*">
 
 <script>
@@ -108,7 +112,6 @@
 		labels.forEach((el, i) => el.innerText = `${i + 1}枚目`);
 	}
 
-	// 並び替え (SortableJS)
 	Sortable.create(gridEl, {
 		animation: 150,
 		onEnd: () => {
@@ -170,8 +173,10 @@
 		status.innerText = "ZIP作成中...";
 		
 		const zip = new JSZip();
-		const imageIds = imageList.map((_, i) => String.fromCharCode(97 + i)); // a, b, c...
+		const imageIds = imageList.map((_, i) => String.fromCharCode(97 + i));
 		const durationMs = parseInt(document.getElementById('totalDuration').value) * 1000;
+		const endTextValue = document.getElementById('endText').value;
+		const textColorValue = document.getElementById('textColor').value;
 
 		// 1. game.json 作成
 		const gameJson = {
@@ -187,7 +192,7 @@
 		imageIds.forEach(id => { gameJson.assets[id] = { type: "image", path: `files/${id}.png`, width: 1280, height: 720 }; });
 		zip.file("game.json", JSON.stringify(gameJson, null, 2));
 
-		// 2. main.js 生成 (data.jsonを内部に含む新形式)
+		// 2. main.js 生成
 		const mainJs = `
 module.exports={assets:{"main": {type:"script",path:"script/main.js",global:true,execute: rv => {
 'use strict';
@@ -195,19 +200,34 @@ function main(param) {
   var TOTAL_MUSIC_DURATION = ${durationMs};
   var MAX_IMAGES = ${imageList.length};
   var FADE_SPEED = ${document.getElementById('fadeIn').value};
-  var FADE_SPEED2 = ${document.getElementById('fadeOut').value};
   var IMAGE_IDS = ${JSON.stringify(imageIds)};
+  var END_MESSAGE = "${endTextValue.replace(/"/g, '\\"')}";
+  var TEXT_COLOR = "${textColorValue}";
+
   var timePerImage = TOTAL_MUSIC_DURATION / MAX_IMAGES;
   var calculatedDuration = timePerImage - (1/FADE_SPEED * (1000/30));
   if (calculatedDuration < 0) calculatedDuration = 0;
+
   var scene = new g.Scene({ game: g.game, assetPaths: ["/**/*"] });
   scene.onLoad.add(function () {
     if (scene.asset.getAudioById("bgm")) scene.asset.getAudioById("bgm").play();
     var currentIndex = 0; var currentSprite = null;
+
     function showNextSlide() {
       if (currentIndex >= MAX_IMAGES) {
-        var font = new g.DynamicFont({ game: g.game, fontFamily: "sans-serif", size: 60 });
-        new g.Label({ scene: scene, font: font, text: "ご視聴ありがとうございました", x: 640, y: 360, anchorX: 0.5, anchorY: 0.5, textColor: "white", parent: scene });
+        var maxFontSize = 60;
+        var maxWidth = 1200;
+        var font = new g.DynamicFont({ game: g.game, fontFamily: "sans-serif", size: maxFontSize });
+        var label = new g.Label({
+          scene: scene, font: font, text: END_MESSAGE,
+          x: 640, y: 360, anchorX: 0.5, anchorY: 0.5,
+          textColor: TEXT_COLOR, parent: scene
+        });
+        // 画面はみ出し防止ロジック
+        if (label.width > maxWidth) {
+          label.fontSize = maxFontSize * (maxWidth / label.width);
+          label.invalidate();
+        }
         return;
       }
       var nextSprite = new g.Sprite({ scene: scene, src: scene.asset.getImageById(IMAGE_IDS[currentIndex]), opacity: currentIndex === 0 ? 1 : 0, parent: scene });
@@ -222,7 +242,7 @@ function main(param) {
           } else {
             nextSprite.onUpdate.removeAll();
             prevSprite.onUpdate.add(function () {
-              prevSprite.opacity -= FADE_SPEED2;
+              prevSprite.opacity -= 0.1;
               if (prevSprite.opacity <= 0) { prevSprite.destroy(); } else { prevSprite.modified(); }
             });
             currentSprite = nextSprite;
@@ -242,7 +262,7 @@ return module.exports;
 
 		zip.file("files/main.js", mainJs);
 
-		// 3. 既存の音声ファイルをそのままコピー (game/files/ から取得)
+		// 3. 既存の音声ファイルをコピー
 		try {
 			const [bgmA, bgmO] = await Promise.all([
 				fetch('./game/files/bgm.m4a').then(r => r.blob()),
@@ -250,12 +270,10 @@ return module.exports;
 			]);
 			zip.file("files/bgm.m4a", bgmA);
 			zip.file("files/bgm.ogg", bgmO);
-		} catch(e) { console.warn("ZIP: Default BGM not found"); }
+		} catch(e) { console.warn("BGM missing"); }
 
-		// 4. 画像を a.png, b.png... として追加
-		imageList.forEach((img, i) => {
-			zip.file(`files/${imageIds[i]}.png`, img.blob);
-		});
+		// 4. 画像追加
+		imageList.forEach((img, i) => { zip.file(`files/${imageIds[i]}.png`, img.blob); });
 
 		const content = await zip.generateAsync({ type: "blob" });
 		saveAs(content, "cm_maker.zip");
