@@ -1,0 +1,260 @@
+{
+	"width": 1280,
+	"height": 720,
+	"fps": 30,
+	"main": "./script/main.js",
+	"assets": {
+		"bgm": {
+			"type": "audio",
+			"path": "files/bgm",
+			"systemId": "sound",
+			"duration": 5200,
+			"hint": {
+				"extensions": [
+					".m4a",
+					".ogg"
+				]
+			},
+			"virtualPath": "audio/bgm"
+		},
+		"a": {
+			"type": "image",
+			"path": "files/a.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/a.png"
+		},
+		"b": {
+			"type": "image",
+			"path": "files/b.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/b.png"
+		},
+		"c": {
+			"type": "image",
+			"path": "files/c.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/c.png"
+		},
+		"d": {
+			"type": "image",
+			"path": "files/d.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/d.png"
+		},
+		"e": {
+			"type": "image",
+			"path": "files/e.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/e.png"
+		},
+		"f": {
+			"type": "image",
+			"path": "files/f.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/f.png"
+		},
+		"g": {
+			"type": "image",
+			"path": "files/g.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/g.png"
+		},
+		"h": {
+			"type": "image",
+			"path": "files/h.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/h.png"
+		},
+		"i": {
+			"type": "image",
+			"path": "files/i.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/i.png"
+		},
+		"j": {
+			"type": "image",
+			"path": "files/j.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/j.png"
+		},
+		"k": {
+			"type": "image",
+			"path": "files/k.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/k.png"
+		},
+		"l": {
+			"type": "image",
+			"path": "files/l.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/l.png"
+		},
+		"m": {
+			"type": "image",
+			"path": "files/m.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/m.png"
+		},
+		"n": {
+			"type": "image",
+			"path": "files/n.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/n.png"
+		},
+		"o": {
+			"type": "image",
+			"path": "files/o.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/o.png"
+		},
+		"p": {
+			"type": "image",
+			"path": "files/p.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/p.png"
+		},
+		"q": {
+			"type": "image",
+			"path": "files/q.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/q.png"
+		},
+		"r": {
+			"type": "image",
+			"path": "files/r.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/r.png"
+		},
+		"s": {
+			"type": "image",
+			"path": "files/s.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/s.png"
+		},
+		"t": {
+			"type": "image",
+			"path": "files/t.png",
+			"width": 1280,
+			"height": 720,
+			"hint": {
+				"untainted": true
+			},
+			"virtualPath": "image/t.png"
+		},
+		"aez_asset_bundle": {
+			"type": "script",
+			"global": true,
+			"path": "files/main.js",
+			"virtualPath": "script/aez_asset_bundle.js"
+		}
+	},
+	"defaultSkippingScene": "indicator",
+	"defaultLoadingScene": "none",
+	"environment": {
+		"sandbox-runtime": "3",
+		"nicolive": {
+			"supportedModes": [
+				"ranking"
+			],
+			"preferredSessionParameters": {
+				"totalTimeLimit": 200
+			}
+		},
+		"external": {
+			"send": "0"
+		},
+		"akashic-runtime": {
+			"version": "~3.12.6-1",
+			"flavor": "-canvas"
+		}
+	},
+	"globalScripts": [],
+	"moduleMainScripts": {},
+	"exportZipInfo": {
+		"version": "2.0.6",
+		"option": {
+			"strip": true,
+			"babel": true,
+			"hashFilename": true,
+			"targetService": "nicolive",
+			"nicolive": true
+		}
+	},
+	"assetBundle": "./script/aez_asset_bundle.js"
+}
