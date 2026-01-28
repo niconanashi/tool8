@@ -4,40 +4,41 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>ニコ生CMメーカー 制作ツール</title>
-	<!-- ユーザー様提供の安定動作ライブラリ群 -->
+	<!-- 安定動作ライブラリ -->
 	<script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 	<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 	<style>
 		body { font-family: sans-serif; background-color: #f0f4f8; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-		.card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 900px; }
-		h1 { font-size: 20px; color: #2d3748; text-align: center; }
-		
-		.controls { display: flex; gap: 15px; background: #edf2f7; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; flex-wrap: wrap; }
+		.card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 900px; }
+		h1 { font-size: 22px; color: #2d3748; text-align: center; margin-top: 0; }
+		.controls { display: flex; gap: 15px; background: #edf2f7; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; flex-wrap: wrap; }
 		.input-group { display: flex; flex-direction: column; gap: 5px; }
-		input[type="number"] { width: 60px; padding: 5px; }
-
+		input[type="number"] { width: 70px; padding: 5px; border: 1px solid #cbd5e0; border-radius: 4px; }
+		
 		/* 画像グリッド */
-		.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin-top: 20px; }
+		.image-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; margin: 20px 0; }
 		.image-item { position: relative; background: #fff; border: 2px solid #e2e8f0; border-radius: 8px; padding: 5px; cursor: grab; text-align: center; }
-		.image-item:active { cursor: grabbing; }
 		.image-item img { width: 100%; height: 85px; object-fit: contain; background: #333; border-radius: 4px; }
-		.image-label { font-size: 12px; margin-top: 5px; font-weight: bold; color: #4a5568; }
+		.image-label { font-size: 11px; margin-top: 5px; font-weight: bold; color: #4a5568; }
 
 		.btn-del { position: absolute; top: -8px; right: -8px; background: #e53e3e; color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; font-weight: bold; z-index: 10; }
-		.btn-add { background: #3182ce; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; margin: 10px 0; }
+		.btn-add { background: #3182ce; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; }
 		
-		#status { margin: 20px 0; padding: 10px; border-radius: 5px; background: #ebf8ff; color: #2b6cb0; font-weight: bold; text-align: center; width: 100%; box-sizing: border-box; }
-		#downloadZip { background: #48bb78; color: white; border: none; padding: 15px; border-radius: 8px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; display: none; }
-		#warning { color: red; font-size: 14px; margin-top: 10px; text-align: center; }
+		#status { margin: 15px 0; padding: 10px; border-radius: 8px; background: #ebf8ff; color: #2b6cb0; font-weight: bold; text-align: center; }
+		#downloadZip { background: #48bb78; color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+		#downloadZip:hover { background: #38a169; }
+		#downloadZip:disabled { background: #cbd5e0; cursor: not-allowed; }
+		.tips { font-size: 12px; color: #718096; text-align: center; margin-bottom: 10px; }
 	</style>
 </head>
 <body>
 
 <div class="card">
 	<h1>ニコ生CMメーカー 制作ツール</h1>
-	
+	<p class="tips">画像をドラッグで並び替え / 画像をクリックで差し替え</p>
+
 	<div class="controls">
 		<div class="input-group">
 			<label>フェードイン速度</label>
@@ -48,22 +49,20 @@
 			<input type="number" id="fadeOut" value="0.1" step="0.01" min="0.01">
 		</div>
 		<div class="input-group" style="flex-grow: 1;">
-			<label>BGMを選択 (m4a/oggへ自動変換)</label>
+			<label>BGMを変更 (ファイル名は自動でbgmになります)</label>
 			<input type="file" id="audio-input" accept="audio/*">
 		</div>
 	</div>
 
 	<div style="text-align: center;">
-		<p style="font-size: 13px; color: #666;">画像をドラッグで並び替え / 画像をクリックで差し替え</p>
-		<button class="btn-add" onclick="document.getElementById('bulk-image-input').click()">画像を追加 (1280x720)</button>
+		<button class="btn-add" onclick="document.getElementById('bulk-image-input').click()">画像を一括追加</button>
 		<input type="file" id="bulk-image-input" style="display:none" multiple accept="image/*">
 	</div>
 
 	<div id="image-grid" class="image-grid"></div>
 
-	<div id="status">FFmpegをロード中...</div>
-	<div id="warning"></div>
-	<button id="downloadZip">game.zip をダウンロード</button>
+	<div id="status">準備中...</div>
+	<button id="downloadZip" disabled>game.zip をダウンロード</button>
 </div>
 
 <!-- 差し替え用の隠しinput -->
@@ -74,10 +73,9 @@
 	const gridEl = document.getElementById('image-grid');
 	const status = document.getElementById('status');
 	const downloadBtn = document.getElementById('downloadZip');
-	const warningDiv = document.getElementById('warning');
 	const replaceInput = document.getElementById('replace-input');
 
-	// ユーザー様環境で正常に動くFFmpeg設定
+	// ユーザー様提供の安定動作設定
 	const ffmpeg = createFFmpeg({
 		log: true,
 		corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js'
@@ -87,18 +85,21 @@
 	let imageList = []; 
 	let replaceTargetId = null;
 
-	// --- 初期化 ---
+	// --- 1. 初期ロード ---
 	(async () => {
 		try {
 			await ffmpeg.load();
-			status.innerText = "初期画像をロードしています...";
-			await loadInitialImages();
+			status.innerText = "初期アセットを読み込んでいます...";
+			// 初期画像とデフォルトBGMをロード
+			await Promise.all([loadInitialImages(), loadDefaultBGM()]);
+			status.innerText = "準備完了！";
+			downloadBtn.disabled = false;
 		} catch (e) {
 			status.innerHTML = "<span style='color:red'>エラー: FFmpegの読み込みに失敗しました。再読み込みしてください。</span>";
+			console.error(e);
 		}
 	})();
 
-	// 初期画像ロード (a.png ～ t.png)
 	async function loadInitialImages() {
 		const alphabet = "abcdefghijklmnopqrst".split("");
 		for (const char of alphabet) {
@@ -106,14 +107,41 @@
 				const res = await fetch(`game/files/${char}.png`);
 				if (!res.ok) continue;
 				const blob = await res.blob();
-				const url = URL.createObjectURL(blob);
+				addImageToList(blob);
+			} catch (e) { console.warn("Image load failed:", char); }
+		}
+	}
+
+	async function loadDefaultBGM() {
+		try {
+			const [resM4a, resOgg] = await Promise.all([
+				fetch('game/files/bgm.m4a'),
+				fetch('game/files/bgm.ogg')
+			]);
+			bgmData.m4a = new Uint8Array(await resM4a.arrayBuffer());
+			bgmData.ogg = new Uint8Array(await resOgg.arrayBuffer());
+			
+			// 再生時間を計算
+			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+			const decoded = await audioCtx.decodeAudioData(bgmData.m4a.buffer.slice(0));
+			bgmData.duration = Math.floor(decoded.duration * 1000);
+		} catch (e) { console.error("Default BGM error:", e); }
+	}
+
+	// --- 2. 画像管理ロジック ---
+	function addImageToList(blob) {
+		const img = new Image();
+		const url = URL.createObjectURL(blob);
+		img.onload = () => {
+			if (img.width === 1280 && img.height === 720) {
 				const item = { id: Math.random(), blob: blob, url: url };
 				imageList.push(item);
 				renderItem(item);
-			} catch (e) { console.warn("Failed to load initial image:", char); }
-		}
-		status.innerText = "準備完了！BGMを選択してください。";
-		checkReady();
+			} else {
+				console.warn("Invalid size ignored");
+			}
+		};
+		img.src = url;
 	}
 
 	function renderItem(item) {
@@ -134,7 +162,6 @@
 		items.forEach((el, i) => el.innerText = `${i + 1}枚目`);
 	}
 
-	// 並び替え (SortableJS)
 	Sortable.create(gridEl, {
 		animation: 150,
 		onEnd: () => {
@@ -148,12 +175,10 @@
 		}
 	});
 
-	// --- 操作ロジック ---
 	function deleteImage(id) {
 		imageList = imageList.filter(img => img.id !== id);
 		gridEl.querySelector(`[data-id="${id}"]`).remove();
 		updateLabels();
-		checkReady();
 	}
 
 	function triggerReplace(id) {
@@ -172,13 +197,7 @@
 	};
 
 	document.getElementById('bulk-image-input').onchange = (e) => {
-		Array.from(e.target.files).forEach(file => {
-			validateImage(file, (newObj) => {
-				imageList.push(newObj);
-				renderItem(newObj);
-				checkReady();
-			});
-		});
+		Array.from(e.target.files).forEach(file => addImageToList(file));
 	};
 
 	function validateImage(file, callback) {
@@ -186,21 +205,20 @@
 		img.onload = () => {
 			if (img.width === 1280 && img.height === 720) {
 				callback({ id: Math.random(), blob: file, url: img.src });
-				warningDiv.innerText = "";
 			} else {
-				alert(`エラー: ${file.name} は1280x720ではありません。`);
+				alert("1280x720の画像のみ許可されています。");
 			}
 		};
 		img.src = URL.createObjectURL(file);
 	}
 
-	// --- 音声変換 (成功済みコード流用) ---
+	// --- 3. 音声変換 (ファイル名を bgm に強制) ---
 	document.getElementById('audio-input').onchange = async (e) => {
 		const file = e.target.files[0];
 		if (!file) return;
 
-		downloadBtn.style.display = 'none';
-		status.innerText = "音声を変換中...時間がかかります";
+		downloadBtn.disabled = true;
+		status.innerText = "音声を変換中...しばらくお待ちください。";
 
 		try {
 			const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -208,37 +226,32 @@
 			const decoded = await audioCtx.decodeAudioData(buffer);
 			bgmData.duration = Math.floor(decoded.duration * 1000);
 
-			ffmpeg.FS('writeFile', 'input_bgm', await fetchFile(file));
+			// FFmpeg仮想FSに保存
+			ffmpeg.FS('writeFile', 'audio_in', await fetchFile(file));
 			
-			status.innerHTML = "AAC (M4A) に変換中...";
-			await ffmpeg.run('-i', 'input_bgm', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'out.m4a');
+			status.innerHTML = "AAC変換中...";
+			await ffmpeg.run('-i', 'audio_in', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', 'out.m4a');
 			bgmData.m4a = ffmpeg.FS('readFile', 'out.m4a');
 
-			status.innerHTML = "OGGに変換中...";
-			await ffmpeg.run('-i', 'input_bgm', '-c:a', 'libvorbis', '-q:a', '4', 'out.ogg');
+			status.innerHTML = "OGG変換中...";
+			await ffmpeg.run('-i', 'audio_in', '-c:a', 'libvorbis', '-q:a', '4', 'out.ogg');
 			bgmData.ogg = ffmpeg.FS('readFile', 'out.ogg');
 
-			status.innerText = `音声準備完了 (${(bgmData.duration/1000).toFixed(1)}秒)`;
-			checkReady();
+			status.innerText = `音声完了: ${(bgmData.duration/1000).toFixed(1)}秒`;
+			downloadBtn.disabled = false;
 		} catch (err) {
 			console.error(err);
-			status.innerHTML = "<span style='color:red'>音声変換に失敗しました。</span>";
+			status.innerHTML = "<span style='color:red'>音声変換エラーが発生しました。</span>";
 		}
 	};
 
-	function checkReady() {
-		if (bgmData.m4a && imageList.length > 0) {
-			downloadBtn.style.display = 'block';
-		}
-	}
-
-	// --- ZIP作成 ---
-	document.getElementById('downloadZip').addEventListener('click', async () => {
-		status.innerText = "ZIPアーカイブを作成中...";
+	// --- 4. パッケージング ---
+	downloadBtn.onclick = async () => {
+		status.innerText = "ZIP作成中...";
 		const zip = new JSZip();
-		const imageIds = imageList.map((_, i) => String.fromCharCode(97 + i)); // a, b, c...
+		const imageIds = imageList.map((_, i) => String.fromCharCode(97 + i));
 
-		// 1. game.json 作成
+		// 1. game.json 生成
 		const gameJson = {
 			width: 1280, height: 720, fps: 30,
 			main: "./script/main.js",
@@ -254,7 +267,7 @@
 		});
 		zip.file("game.json", JSON.stringify(gameJson, null, 2));
 
-		// 2. main.js 作成
+		// 2. main.js 生成
 		const mainJs = `
 module.exports={assets:{"main": {type:"script",path:"script/main.js",global:true,execute: rv => {
 'use strict';
@@ -312,17 +325,18 @@ return module.exports;
 },},"data": {type:"text",path:"text/data.json",data: \`{}\`,},}}`;
 
 		zip.file("files/main.js", mainJs);
+		// 音声ファイル名を bgm に固定してZIPに入れる
 		zip.file("files/bgm.m4a", bgmData.m4a);
 		zip.file("files/bgm.ogg", bgmData.ogg);
+		
 		imageList.forEach((img, i) => {
 			zip.file(`files/${imageIds[i]}.png`, img.blob);
 		});
 
 		const content = await zip.generateAsync({ type: "blob" });
 		saveAs(content, "cm_maker.zip");
-		status.innerText = "ダウンロード完了！そのままニコ生に投稿できます。";
-	});
+		status.innerText = "保存完了！ニコ生へ投稿してください。";
+	};
 </script>
-
 </body>
 </html>
