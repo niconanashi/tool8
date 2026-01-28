@@ -1,1 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ニコ生CMメーカー 制作ツール</title>
+    <!-- FFmpeg v0.11 -->
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 800px; width: 100%; }
+        h1 { color: #2c3e50; text-align: center; }
+        .section { margin-bottom: 25px; padding: 15px; border: 1px solid #eee; border-radius: 8px; }
+        label { display: block; font-weight: bold; margin-bottom: 8px; }
+        input[type="number"], input[type="text"] { width: 100px; padding: 5px; margin-bottom: 10px; }
+        .drop-zone { border: 2px dashed #3498db; padding: 40px; text-align: center; color: #3498db; cursor: pointer; background: #ebf5fb; transition: 0.3s; margin-top: 10px; }
+        .drop-zone:hover { background: #d6eaf8; }
+        .thumb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin-top: 15px; }
+        .thumb-item { position: relative; width: 120px; height: 68px; border: 2px solid #ddd; border-radius: 4px; overflow: hidden; background: #333; }
+        .thumb-item img { width: 100%; height: 100%; object-fit: contain; }
+        .status { margin-top: 20px; padding: 10px; font-weight: bold; color: #e67e22; text-align: center; }
+        button#download-btn { background: #27ae60; color: white; border: none; padding: 15px 30px; border-radius: 30px; font-size: 1.2rem; cursor: pointer; width: 100%; transition: 0.3s; display: none; }
+        button#download-btn:hover { background: #2ecc71; }
+        .error { color: #e74c3c; font-size: 0.85rem; margin-top: 5px; }
+    </style>
+</head>
+<body>
 
+<div class="container">
+    <h1>ニコ生CMメーカー作成ツール</h1>
+    
+    <div class="section">
+        <label>1. 設定</label>
+        フェードイン速度: <input type="number" id="fade-speed" value="0.02" step="0.01" min="0.01"> (推奨: 0.02)<br>
+        フェードアウト速度: <input type="number" id="fade-speed2" value="0.1" step="0.01" min="0.01">
+    </div>
+
+    <div class="section">
+        <label>2. BGMの選択 (1ファイル)</label>
+        <p><small>※自動的に m4a/ogg に変換し、再生時間を取得します</small></p>
+        <input type="file" id="audio-input" accept="audio/*">
+        <div id="audio-info"></div>
+    </div>
+
+    <div class="section">
+        <label>3. 画像の選択 (1280x720のみ・複数可)</label>
+        <div class="drop-zone" id="image-drop-zone">
+            ここに画像をドロップ、またはクリックして選択
+        </div>
+        <input type="file" id="image-input" multiple accept="image/png,image/jpeg" style="display:none">
+        <div class="thumb-grid" id="thumb-grid"></div>
+    </div>
+
+    <div id="status" class="status">準備中...</div>
+    <button id="download-btn">game.zip を作成してダウンロード</button>
+</div>
+
+<script>
+    const { createFFmpeg, fetchFile } = FFmpeg;
+    const ffmpeg = createFFmpeg({ log: false, corePath: 'https://unpkg.com/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js' });
+
+    let bgmBlobM4A = null;
+    let bgmBlobOGG = null;
+    let bgmDurationMs = 0;
+    let imageFiles = []; // { name: 'a', data: blob, id: 'a' }
+
+    const status = document.getElementById('status');
+    const downloadBtn = document.getElementById('download-btn');
+    const thumbGrid = document.getElementById('thumb-grid');
+
+    // FFmpeg初期化
+    (async () => {
+        try {
+            await ffmpeg.load();
+            status.innerText = "準備完了！画像と音声を追加してください。";
+        } catch (e) {
+            status.innerText = "エラー: FFmpegの読み込みに失敗しました。";
+        }
+    })();
+
+    // 音声処理
+    document.getElementById('audio-input').onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        status.innerText = "音声変換中...（時間がかかります）";
+        
+        // 再生時間の取得
+        const tempAudio = new Audio();
+        tempAudio.src = URL.createObjectURL(file);
+        tempAudio.onloadedmetadata = async () => {
+            bgmDurationMs = Math.floor(tempAudio.duration * 1000);
+            
+            // FFmpeg変換
+            ffmpeg.FS('writeFile', 'input', await fetchFile(file));
+            await ffmpeg.run('-i', 'input', '-c:a', 'aac', '-b:a', '128k', 'out.m4a');
+            bgmBlobM4A = new Blob([ffmpeg.FS('readFile', 'out.m4a')], { type: 'audio/mp4' });
+            
+            await ffmpeg.run('-i', 'input', '-c:a', 'libvorbis', '-q:a', '4', 'out.ogg');
+            bgmBlobOGG = new Blob([ffmpeg.FS('readFile', 'out.ogg')], { type: 'audio/ogg' });
+
+            status.innerText = `音声完了: ${(bgmDurationMs/1000).toFixed(1)}秒`;
+            checkReady();
+        };
+    };
+
+    // 画像処理
+    const imageDropZone = document.getElementById('image-drop-zone');
+    const imageInput = document.getElementById('image-input');
+
+    imageDropZone.onclick = () => imageInput.click();
+    imageInput.onchange = (e) => handleImages(e.target.files);
+    imageDropZone.ondragover = (e) => { e.preventDefault(); imageDropZone.style.background = "#d6eaf8"; };
+    imageDropZone.ondragleave = () => { imageDropZone.style.background = "#ebf5fb"; };
+    imageDropZone.ondrop = (e) => { e.preventDefault(); handleImages(e.dataTransfer.files); };
+
+    function handleImages(files) {
+        Array.from(files).forEach(file => {
+            const img = new Image();
+            img.onload = () => {
+                if (img.width === 1280 && img.height === 720) {
+                    const id = String.fromCharCode(97 + imageFiles.length); // a, b, c...
+                    imageFiles.push({ id: id, data: file, url: img.src });
+                    renderThumbs();
+                } else {
+                    alert(`${file.name} : サイズが 1280x720 ではありません。`);
+                }
+                checkReady();
+            };
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
+    function renderThumbs() {
+        thumbGrid.innerHTML = "";
+        imageFiles.forEach(img => {
+            const div = document.createElement('div');
+            div.className = 'thumb-item';
+            div.innerHTML = `<img src="${img.url}"><div style="position:absolute; bottom:0; background:rgba(0,0,0,0.5); color:white; width:100%; font-size:10px; text-align:center">${img.id}.png</div>`;
+            thumbGrid.appendChild(div);
+        });
+    }
+
+    function checkReady() {
+        if (bgmBlobM4A && imageFiles.length > 0) {
+            downloadBtn.style.display = "block";
+        }
+    }
+
+    // ZIP生成
+    downloadBtn.onclick = async () => {
+        status.innerText = "ZIPパッケージ作成中...";
+        const zip = new JSZip();
+        
+        // 1. game.json の生成
+        const gameJson = {
+            width: 1280, height: 720, fps: 30,
+            main: "./script/main.js",
+            assets: {
+                bgm: {
+                    type: "audio", path: "files/bgm", systemId: "sound",
+                    duration: bgmDurationMs, hint: { extensions: [".m4a", ".ogg"] }
+                },
+                aez_asset_bundle: {
+                    type: "script", global: true, path: "files/main.js", virtualPath: "script/aez_asset_bundle.js"
+                }
+            },
+            environment: {
+                sandbox_runtime: "3",
+                nicolive: { supportedModes: ["ranking"], preferredSessionParameters: { totalTimeLimit: Math.ceil(bgmDurationMs / 1000) + 10 } }
+            },
+            assetBundle: "./script/aez_asset_bundle.js"
+        };
+
+        // 画像アセットをgame.jsonに追加
+        imageFiles.forEach(img => {
+            gameJson.assets[img.id] = {
+                type: "image", path: `files/${img.id}.png`, width: 1280, height: 720
+            };
+        });
+
+        zip.file("game.json", JSON.stringify(gameJson, null, "\t"));
+
+        // 2. main.js の生成 (テンプレートの書き換え)
+        const imageIdsArray = imageFiles.map(i => `"${i.id}"`).join(", ");
+        const mainJsContent = `
+module.exports={assets:{"main": {type:"script",path:"script/main.js",global:true,execute: rv => {
+'use strict';
+function main(param) {
+  var TOTAL_MUSIC_DURATION = ${bgmDurationMs};
+  var MAX_IMAGES = ${imageFiles.length};
+  var FADE_SPEED = ${document.getElementById('fade-speed').value};
+  var FADE_SPEED2 = ${document.getElementById('fade-speed2').value};
+  var IMAGE_IDS = [${imageIdsArray}];
+
+  var timePerImage = TOTAL_MUSIC_DURATION / MAX_IMAGES;
+  var fps = 30;
+  var fadeTimeMs = 1 / FADE_SPEED * (1000 / fps);
+  var calculatedDuration = timePerImage - fadeTimeMs;
+  if (calculatedDuration < 0) calculatedDuration = 0;
+
+  g.game.audio.music.volume = 0.9;
+  var scene = new g.Scene({ game: g.game, assetPaths: ["/**/*"] });
+  
+  scene.onLoad.add(function () {
+    if (scene.asset.getAudioById("bgm")) scene.asset.getAudioById("bgm").play();
+    var currentIndex = 0;
+    var currentSprite = null;
+
+    function showNextSlide() {
+      if (currentIndex >= MAX_IMAGES) {
+        var label = new g.Label({
+          scene: scene, font: new g.DynamicFont({ game: g.game, fontFamily: "sans-serif", size: 60, fontColor: "white" }),
+          text: "ご視聴ありがとうございました", x: 640, y: 360, anchorX: 0.5, anchorY: 0.5, parent: scene
+        });
+        return;
+      }
+      var nextSprite = new g.Sprite({
+        scene: scene, src: scene.asset.getImageById(IMAGE_IDS[currentIndex]),
+        opacity: currentIndex === 0 ? 1 : 0, parent: scene
+      });
+
+      if (currentIndex === 0) {
+        currentSprite = nextSprite;
+        startTimer(timePerImage);
+      } else {
+        var prevSprite = currentSprite;
+        nextSprite.onUpdate.add(function () {
+          if (nextSprite.opacity < 1) {
+            nextSprite.opacity += FADE_SPEED;
+            if (nextSprite.opacity > 1) nextSprite.opacity = 1;
+            nextSprite.modified();
+          } else {
+            nextSprite.onUpdate.removeAll();
+            prevSprite.onUpdate.add(function () {
+              prevSprite.opacity -= FADE_SPEED2;
+              if (prevSprite.opacity <= 0) { prevSprite.destroy(); } else { prevSprite.modified(); }
+            });
+            currentSprite = nextSprite;
+            startTimer(calculatedDuration);
+          }
+        });
+      }
+    }
+
+    function startTimer(duration) {
+      scene.setTimeout(function () { currentIndex++; showNextSlide(); }, duration);
+    }
+    showNextSlide();
+  });
+  g.game.pushScene(scene);
+}
+module.exports = main;
+return module.exports;
+},},"data": {type:"text",path:"text/data.json",data: \`{}\`,},}}`;
+
+        zip.file("files/main.js", mainJsContent);
+
+        // 3. アセットファイルの追加
+        zip.file("files/bgm.m4a", bgmBlobM4A);
+        zip.file("files/bgm.ogg", bgmBlobOGG);
+        
+        for (const img of imageFiles) {
+            zip.file(`files/${img.id}.png`, img.data);
+        }
+
+        const content = await zip.generateAsync({ type: "blob" });
+        saveAs(content, "game.zip");
+        status.innerText = "ダウンロードが開始されました！";
+    };
+</script>
+
+</body>
+</html>
