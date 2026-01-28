@@ -106,4 +106,5 @@ function main(param) {
 module.exports = main;
 return module.exports;
 },
+},"data": {type:"text",path:"text/data.json",data: `{}`,
 },}}
