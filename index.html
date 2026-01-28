@@ -290,16 +290,57 @@
 
 		// 1. game.json
 		const gameJson = {
-			width: 1280, height: 720, fps: 30,
+			width: 1280,
+			height: 720,
+			fps: 30,
 			main: "./script/main.js",
 			assets: {
-				bgm: { type: "audio", path: "files/bgm", systemId: "sound", duration: durationMs, hint: { extensions: [".m4a", ".ogg"] } },
-				aez_asset_bundle: { type: "script", global: true, path: "files/main.js", virtualPath: "script/aez_asset_bundle.js" }
+				bgm: {
+					type: "audio",
+					path: "files/bgm",
+					systemId: "sound",
+					duration: durationMs,
+					hint: { extensions: [".m4a", ".ogg"] },
+					virtualPath: "audio/bgm" // 修正
+				},
+				aez_asset_bundle: {
+					type: "script",
+					global: true,
+					path: "files/main.js",
+					virtualPath: "script/aez_asset_bundle.js"
+				}
 			},
-			environment: { "sandbox-runtime": "3", nicolive: { supportedModes: ["ranking"], preferredSessionParameters: { totalTimeLimit: Math.ceil(durationMs/1000) + 10 } } },
+			environment: {
+				"sandbox-runtime": "3",
+				nicolive: {
+					supportedModes: ["ranking"],
+					preferredSessionParameters: { totalTimeLimit: Math.ceil(durationMs / 1000) + 10 }
+				},
+				external: { send: "0" },
+				"akashic-runtime": { version: "~3.12.6-1", flavor: "-canvas" }
+			},
+			// 修正：トップレベルのプロパティを追加
+			globalScripts: [],
+			moduleMainScripts: {},
+			exportZipInfo: {
+				version: "2.0.6",
+				option: { strip: true, babel: true, hashFilename: true, targetService: "nicolive", nicolive: true }
+			},
 			assetBundle: "./script/aez_asset_bundle.js"
 		};
-		imageIds.forEach(id => { gameJson.assets[id] = { type: "image", path: `files/${id}.png`, width: 1280, height: 720 }; });
+
+		// 各画像アセットに virtualPath と hint を追加
+		imageIds.forEach(id => {
+			gameJson.assets[id] = {
+				type: "image",
+				path: `files/${id}.png`,
+				width: 1280,
+				height: 720,
+				hint: { untainted: true }, // 修正
+				virtualPath: `image/${id}.png` // 修正
+			};
+		});
+
 		zip.file("game.json", JSON.stringify(gameJson, null, 2));
 
 		// 2. main.js (Akashic Engine ロジック)
