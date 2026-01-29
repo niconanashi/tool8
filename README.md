@@ -25,4 +25,4 @@
 * **容量制限**：**投稿する game.zip には上限 30MB 程度の制限があります。音声、画像のファイルサイズにもよりますが 50～100 枚程度が上限の目安です。**
 
 ### ライセンス
-本リポジトリは [MIT License](LICENSE) の元で公開されています。 詳しくは [MIT License](https://github.com/niconanashi/tool8/blob/main/LICENSE) をご覧ください。
+本リポジトリは [MIT License](LICENSE) の元で公開されています。
